@@ -1,0 +1,153 @@
+# =============================================================================
+# Production wake-word config — OpenAI-style TTS API
+# =============================================================================
+#
+# Install:   uv sync --extra train
+# Prefetch:  livekit-wakeword setup --config configs/prod_openai.yml
+# Pipeline:  livekit-wakeword run configs/prod_openai.yml
+#
+# Requires:  OPENAI_API_KEY environment variable if using api.openai.com.
+#            Can also be used with local OpenAI-compatible endpoints.
+#
+# Schema:    WakeWordConfig in src/livekit/wakeword/config.py
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# model_name (required)
+# -----------------------------------------------------------------------------
+# Used for output/<model_name>/, checkpoint basename, and exported ONNX filename.
+
+model_name: hey_livekit_openai
+
+# -----------------------------------------------------------------------------
+# target_phrases (required)
+# -----------------------------------------------------------------------------
+# Exact phrases to synthesize as positives and to defend against via adversarial
+# negatives. Include spelling variants users might say.
+
+target_phrases:
+  - "hey livekit"
+
+# =============================================================================
+# Data generation (top-level)
+# =============================================================================
+
+# tts_backend — Synthetic speech engine for clip generation.
+#   piper_vits — VITS + SLERP (904 speakers).
+#   voxcpm     — VoxCPM2 voice-design TTS.
+#   openai     — OpenAI-style TTS API (/v1/audio/speech).
+tts_backend: openai
+
+# n_samples — Training clips per synthetic class (positive + adversarial negative).
+# Each class gets this many clips before augmentation rounds multiply variants.
+n_samples: 25000
+
+# n_samples_val — Validation clips per synthetic class (~10–20% of n_samples).
+n_samples_val: 5000
+
+# n_background_samples / n_background_samples_val — Count of tiled background-noise clips.
+n_background_samples: 2000
+n_background_samples_val: 500
+
+# tts_batch_size — GPU batch size for VITS. (Ignored for OpenAI backend as it uses thread concurrency).
+tts_batch_size: 50
+
+# custom_negative_phrases — Extra adversarial phrases (in addition to auto phoneme edits).
+custom_negative_phrases:
+  - "livekit"
+  - "hey"
+  - "hey liquid"
+  - "hey libby"
+  - "okay livekit"
+  - "hi livekit"
+  - "hello livekit"
+
+# -----------------------------------------------------------------------------
+# openai_tts — OpenAI-style TTS settings (only used when tts_backend is openai)
+# -----------------------------------------------------------------------------
+# api_key      — OpenAI API key. Defaults to the OPENAI_API_KEY environment variable.
+# base_url     — Base URL for the endpoint (default: https://api.openai.com/v1).
+# model        — Model name to use (default: tts-1).
+# voices       — List of voice IDs/names to diversify over (cycled per clip).
+# languages    — Optional list of languages to cycle through (added to JSON body).
+# instructions — Optional list of style/personality instruction prompts to cycle through.
+# concurrency  — Number of parallel request threads (default: 5).
+# max_retries  — Retries with exponential backoff on transient errors (default: 5).
+# response_format — Audio format requested from the API (default: wav).
+openai_tts:
+  api_key: null
+  base_url: "https://api.openai.com/v1"
+  model: "tts-1"
+  voices:
+    - alloy
+    - echo
+    - fable
+    - onyx
+    - nova
+    - shimmer
+  languages:
+    - "en"
+  instructions: null
+  concurrency: 5
+  max_retries: 5
+  response_format: "wav"
+
+# =============================================================================
+# Paths
+# =============================================================================
+
+# data_dir  — Root for downloads (setup), backgrounds, RIRs.
+data_dir: ./data
+
+# output_dir — Root for generated clips, features, checkpoints, exports.
+output_dir: ./output
+
+# =============================================================================
+# augmentation (AugmentationConfig)
+# =============================================================================
+# clip_duration    — Seconds; fixed window for embedding pipeline.
+# batch_size       — Augmentation batch size.
+# rounds           — Augmentation passes per sample.
+# background_paths — Dirs of raw noise (MUSAN subset from setup).
+# rir_paths        — Room impulse response dirs (from setup).
+
+augmentation:
+  clip_duration: 2.0
+  batch_size: 16
+  rounds: 3
+  background_paths: [./data/backgrounds]
+  rir_paths: [./data/rirs]
+
+# =============================================================================
+# model (ModelConfig)
+# =============================================================================
+# model_type — dnn | rnn | conv_attention
+# model_size — tiny | small | medium | large  (layer width × depth presets)
+
+model:
+  model_type: conv_attention
+  model_size: medium
+
+# =============================================================================
+# Training
+# =============================================================================
+# steps                 — Phase-1 step budget.
+# learning_rate         — AdamW base LR.
+# weight_decay          — AdamW L2-style decay.
+# label_smoothing       — BCE target smoothing.
+# max_negative_weight   — Upper cap for negative-class loss weight ramp.
+# target_fp_per_hour    — Validation FPPH target for adaptive weighting / thresholding.
+# batch_n_per_class     — Samples per class per training step.
+
+steps: 100000
+learning_rate: 0.0001
+weight_decay: 0.01
+label_smoothing: 0.05
+max_negative_weight: 3000
+target_fp_per_hour: 0.1
+
+batch_n_per_class:
+  positive: 50
+  adversarial_negative: 50
+  ACAV100M_sample: 1024
+  background_noise: 50

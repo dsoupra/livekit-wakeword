@@ -76,18 +76,21 @@ custom_negative_phrases:
 # response_format — Audio format requested from the API (default: wav).
 openai_tts:
   api_key: null
-  base_url: "https://api.openai.com/v1"
-  model: "tts-1"
-  voices:
-    - alloy
-    - echo
-    - fable
-    - onyx
-    - nova
-    - shimmer
+  base_url: "http://51.159.148.156:8091/v1"
+  model: "Qwen/Qwen3-TTS-12Hz-1.7B-VoiceDesign"
+  voices: null
   languages:
-    - "en"
-  instructions: null
+    - "French"
+  task_type: "VoiceDesign"
+  instructions:
+    - "A young adult woman, clear mid-pitch voice, moderate pace, calm and professional"
+    - "A young adult man, warm baritone, steady pace, friendly and articulate"
+    - "A middle-aged woman, slightly low pitch, measured pace, confident tone"
+    - "A middle-aged man, deep resonant voice, slow deliberate pace"
+    - "A young woman, bright energetic tone, slightly faster pace"
+    - "A young man, light tenor, quick conversational pace"
+    - "A woman in her thirties, smooth alto, neutral accent, even pace"
+    - "A man in his thirties, clear baritone, businesslike pace"
   concurrency: 5
   max_retries: 5
   response_format: "wav"

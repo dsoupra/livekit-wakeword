@@ -39,6 +39,7 @@ class OpenAiBackend:
         self._concurrency = config.openai_tts.concurrency
         self._max_retries = config.openai_tts.max_retries
         self._response_format = config.openai_tts.response_format
+        self._task_type = config.openai_tts.task_type
 
     @classmethod
     def from_config(cls, config: WakeWordConfig) -> OpenAiBackend:
@@ -47,8 +48,6 @@ class OpenAiBackend:
     def validate_artifacts(self) -> None:
         if not self._base_url:
             raise ValueError("openai_tts.base_url must be configured")
-        if not self._voices:
-            raise ValueError("openai_tts.voices must be non-empty")
 
         # Log a warning if using OpenAI directly but API key is missing
         if "api.openai.com" in self._base_url and not self._api_key:
@@ -106,7 +105,7 @@ class OpenAiBackend:
         self,
         sample_idx: int,
         phrase: str,
-        voice: str,
+        voice: str | None,
         lang: str | None,
         inst: str | None,
         out_path: Path,
@@ -122,13 +121,20 @@ class OpenAiBackend:
         payload: dict[str, Any] = {
             "model": self._model,
             "input": phrase,
-            "voice": voice,
             "response_format": self._response_format,
         }
+        if self._task_type is not None:
+            payload["task_type"] = self._task_type
+        if voice is not None:
+            payload["voice"] = voice
         if lang is not None:
             payload["language"] = lang
         if inst is not None:
-            payload["instruction"] = inst
+            if self._task_type == "VoiceDesign":
+                payload["instructions"] = inst
+            else:
+                payload["instruction"] = inst
+                payload["instructions"] = inst
 
         # Get raw response audio bytes
         audio_bytes = self._request_with_retry(url, payload, headers)
@@ -191,7 +197,7 @@ class OpenAiBackend:
             if p.exists():
                 generated.append(p)
 
-        n_voices = len(self._voices)
+        n_voices = len(self._voices) if self._voices else 0
 
         pbar = tqdm(
             total=n_samples,
@@ -204,7 +210,7 @@ class OpenAiBackend:
             futures_to_idx = {}
             for sample_idx in range(start_index, n_samples):
                 phrase = phrases[sample_idx % len(phrases)]
-                voice = self._voices[sample_idx % n_voices]
+                voice = self._voices[sample_idx % n_voices] if n_voices > 0 else None
                 lang = (
                     self._languages[sample_idx % len(self._languages)] if self._languages else None
                 )

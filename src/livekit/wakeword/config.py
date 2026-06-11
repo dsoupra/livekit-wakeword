@@ -127,7 +127,7 @@ class OpenAiTtsConfig(BaseModel):
         default="tts-1",
         description="Model name to use",
     )
-    voices: list[str] = Field(
+    voices: list[str] | None = Field(
         default_factory=lambda: ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
         description="List of voices to diversify over",
     )
@@ -138,6 +138,10 @@ class OpenAiTtsConfig(BaseModel):
     instructions: list[str] | None = Field(
         default=None,
         description="Optional list of style/personality instruction prompts to diversify over",
+    )
+    task_type: str | None = Field(
+        default=None,
+        description="Optional task type to pass to the API (e.g. VoiceDesign for Qwen-TTS)",
     )
     concurrency: int = Field(
         default=5,

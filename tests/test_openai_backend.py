@@ -141,3 +141,35 @@ def test_openai_backend_retries(mock_urlopen: MagicMock, tmp_path: Path) -> None
         assert len(clips) == 1
         assert mock_sleep.call_count == 1
         assert mock_urlopen.call_count == 2
+
+
+@patch("urllib.request.urlopen")
+def test_openai_backend_no_voices(mock_urlopen: MagicMock, tmp_path: Path) -> None:
+    """Test synthesis with voices=None, verifying payload does not contain voice key."""
+    mock_response = MagicMock()
+    mock_response.read.return_value = generate_mock_wav_bytes(sr=16000)
+    mock_response.__enter__.return_value = mock_response
+    mock_urlopen.return_value = mock_response
+
+    config = WakeWordConfig(
+        model_name="test",
+        target_phrases=["hey test"],
+        tts_backend=TtsBackend.openai,
+    )
+    config.openai_tts.voices = None
+    config.openai_tts.concurrency = 1
+
+    backend = get_tts_backend(config)
+    backend.validate_artifacts()
+
+    clips = backend.synthesize_clips(
+        phrases=["hello"],
+        output_dir=tmp_path / "clips",
+        n_samples=1,
+    )
+
+    assert len(clips) == 1
+    assert mock_urlopen.call_count == 1
+    req = mock_urlopen.call_args[0][0]
+    payload = json.loads(req.data.decode("utf-8"))
+    assert "voice" not in payload

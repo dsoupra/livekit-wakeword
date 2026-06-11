@@ -13,9 +13,7 @@ CHECKPOINT_RELPATH = f"{DATA_SUBDIR}/{STATE_DICT_FILENAME}"
 
 # GitHub release asset names (differ from on-disk filenames).
 RELEASE_TAG = "v0.1.0"
-RELEASE_BASE_URL = (
-    f"https://github.com/livekit/livekit-wakeword/releases/download/{RELEASE_TAG}"
-)
+RELEASE_BASE_URL = f"https://github.com/livekit/livekit-wakeword/releases/download/{RELEASE_TAG}"
 RELEASE_STATE_DICT_ASSET = f"{CHECKPOINT_STEM}.state_dict.pt"
 RELEASE_CONFIG_JSON_ASSET = f"{CHECKPOINT_STEM}.config.json"
 

@@ -53,7 +53,6 @@ class AudioAugmentor:
             )
         return self._per_sample_aug
 
-
     def apply_rir(self, audio: np.ndarray, p: float = 0.5) -> np.ndarray:
         """Convolve audio with a random room impulse response."""
         if random.random() > p or not self.rir_files:
@@ -125,9 +124,12 @@ def align_clip_to_end(
 
 
 _ALL_SPLITS = [
-    "positive_train", "positive_test",
-    "negative_train", "negative_test",
-    "background_train", "background_test",
+    "positive_train",
+    "positive_test",
+    "negative_train",
+    "negative_test",
+    "background_train",
+    "background_test",
 ]
 
 

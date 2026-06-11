@@ -167,7 +167,8 @@ class WakeWordTrainer:
                 if remainder > 0:
                     logger.warning(
                         "Dropping %d/%d validation samples (not divisible by 16)",
-                        remainder, val_neg.shape[0],
+                        remainder,
+                        val_neg.shape[0],
                     )
                 val_neg = val_neg[:n_full].reshape(-1, 16, 96)
             neg = np.concatenate([neg, val_neg], axis=0) if neg.shape[0] > 0 else val_neg
@@ -197,7 +198,10 @@ class WakeWordTrainer:
         clip_duration = self.config.augmentation.clip_duration
         validation_hours = neg_features.shape[0] * clip_duration / 3600.0
         return evaluate_model(
-            pos_preds, neg_preds, threshold=0.5, validation_hours=validation_hours,
+            pos_preds,
+            neg_preds,
+            threshold=0.5,
+            validation_hours=validation_hours,
         )
 
     def _log_metrics(self, step: int, phase: int, metrics: dict[str, float]) -> None:
@@ -397,7 +401,8 @@ class WakeWordTrainer:
         clip_duration = self.config.augmentation.clip_duration
         validation_hours = neg_features.shape[0] * clip_duration / 3600.0
         return find_best_threshold(
-            pos_preds, neg_preds,
+            pos_preds,
+            neg_preds,
             validation_hours=validation_hours,
             target_fpph=self.config.target_fp_per_hour,
         )

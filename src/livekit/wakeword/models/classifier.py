@@ -5,7 +5,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 
-from ..config import ModelSize, ModelType, MODEL_SIZE_PRESETS
+from ..config import MODEL_SIZE_PRESETS, ModelSize, ModelType
 
 
 class FCNBlock(nn.Module):
@@ -49,11 +49,13 @@ class ConvAttentionClassifier(nn.Module):
             nn.ReLU(inplace=True),
         ]
         for _ in range(n_blocks):
-            conv_layers.extend([
-                nn.Conv1d(layer_dim, layer_dim, kernel_size=3, padding=1),
-                nn.LayerNorm([layer_dim, n_timesteps]),
-                nn.ReLU(inplace=True),
-            ])
+            conv_layers.extend(
+                [
+                    nn.Conv1d(layer_dim, layer_dim, kernel_size=3, padding=1),
+                    nn.LayerNorm([layer_dim, n_timesteps]),
+                    nn.ReLU(inplace=True),
+                ]
+            )
         self.conv = nn.Sequential(*conv_layers)
 
         # Self-attention over timesteps

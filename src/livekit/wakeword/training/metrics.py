@@ -114,8 +114,10 @@ def find_best_threshold(
     for t in thresholds:
         t_float = float(t)
         metrics = evaluate_model(
-            positive_preds, negative_preds,
-            threshold=t_float, validation_hours=validation_hours,
+            positive_preds,
+            negative_preds,
+            threshold=t_float,
+            validation_hours=validation_hours,
         )
         if metrics["recall"] < min_recall:
             continue
@@ -135,6 +137,8 @@ def find_best_threshold(
         return best_fallback
     # Nothing met min_recall — return default
     return evaluate_model(
-        positive_preds, negative_preds,
-        threshold=0.5, validation_hours=validation_hours,
+        positive_preds,
+        negative_preds,
+        threshold=0.5,
+        validation_hours=validation_hours,
     )

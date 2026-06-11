@@ -26,7 +26,7 @@ model_name: hey_livekit_openai
 # negatives. Include spelling variants users might say.
 
 target_phrases:
-  - "hey livekit"
+  - "oké fri"
 
 # =============================================================================
 # Data generation (top-level)
@@ -40,27 +40,22 @@ tts_backend: openai
 
 # n_samples — Training clips per synthetic class (positive + adversarial negative).
 # Each class gets this many clips before augmentation rounds multiply variants.
-n_samples: 25000
+n_samples: 250
 
 # n_samples_val — Validation clips per synthetic class (~10–20% of n_samples).
-n_samples_val: 5000
+n_samples_val: 50
 
 # n_background_samples / n_background_samples_val — Count of tiled background-noise clips.
-n_background_samples: 2000
-n_background_samples_val: 500
+n_background_samples: 20
+n_background_samples_val: 5
 
 # tts_batch_size — GPU batch size for VITS. (Ignored for OpenAI backend as it uses thread concurrency).
 tts_batch_size: 50
 
 # custom_negative_phrases — Extra adversarial phrases (in addition to auto phoneme edits).
 custom_negative_phrases:
-  - "livekit"
-  - "hey"
-  - "hey liquid"
-  - "hey libby"
-  - "okay livekit"
-  - "hi livekit"
-  - "hello livekit"
+  - "oké"
+  - "fri"
 
 # -----------------------------------------------------------------------------
 # openai_tts — OpenAI-style TTS settings (only used when tts_backend is openai)

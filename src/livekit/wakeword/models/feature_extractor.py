@@ -16,6 +16,7 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
+
 class MelSpectrogramFrontend:
     """Stage 1: Raw audio → mel-spectrogram features.
 
@@ -77,6 +78,7 @@ class MelSpectrogramFrontend:
         # Post-processing: x/10 + 2 (matches openWakeWord's melspec_transform)
         mel = mel / 10.0 + 2.0
         return mel
+
 
 class SpeechEmbedding:
     """Stage 2: Google's speech_embedding CNN via ONNX runtime.

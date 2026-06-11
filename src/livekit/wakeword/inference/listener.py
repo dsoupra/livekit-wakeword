@@ -124,7 +124,7 @@ class WakeWordListener:
         if self._task:
             try:
                 await asyncio.wait_for(self._task, timeout=2.0)
-            except (asyncio.TimeoutError, asyncio.CancelledError):
+            except (TimeoutError, asyncio.CancelledError):
                 self._task.cancel()
                 try:
                     await self._task
@@ -195,9 +195,7 @@ class WakeWordListener:
                             self._frame_buffer.clear()
 
                             await self._detection_queue.put(
-                                Detection(
-                                    name=name, confidence=score, timestamp=now
-                                )
+                                Detection(name=name, confidence=score, timestamp=now)
                             )
                             break  # one detection per iteration
         except asyncio.CancelledError:
@@ -243,8 +241,6 @@ class WakeWordListener:
             return self._detection_queue.get_nowait()
 
         if self._error is not None:
-            raise RuntimeError(
-                f"Audio loop crashed: {self._error}"
-            ) from self._error
+            raise RuntimeError(f"Audio loop crashed: {self._error}") from self._error
 
         raise RuntimeError("Audio loop ended unexpectedly")

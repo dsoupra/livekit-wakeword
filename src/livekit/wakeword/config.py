@@ -34,6 +34,7 @@ class TtsBackend(StrEnum):
 
     piper_vits = "piper_vits"
     voxcpm = "voxcpm"
+    openai = "openai"
 
 
 class ExportFormat(StrEnum):
@@ -111,6 +112,47 @@ class VoxCpmTtsConfig(BaseModel):
     )
 
 
+class OpenAiTtsConfig(BaseModel):
+    """OpenAI-style TTS API configuration."""
+
+    api_key: str | None = Field(
+        default=None,
+        description="API key for authentication (defaults to OPENAI_API_KEY env var)",
+    )
+    base_url: str = Field(
+        default="https://api.openai.com/v1",
+        description="Base URL for the API endpoint",
+    )
+    model: str = Field(
+        default="tts-1",
+        description="Model name to use",
+    )
+    voices: list[str] = Field(
+        default_factory=lambda: ["alloy", "echo", "fable", "onyx", "nova", "shimmer"],
+        description="List of voices to diversify over",
+    )
+    languages: list[str] | None = Field(
+        default=None,
+        description="Optional list of languages to diversify over",
+    )
+    instructions: list[str] | None = Field(
+        default=None,
+        description="Optional list of style/personality instruction prompts to diversify over",
+    )
+    concurrency: int = Field(
+        default=5,
+        description="Number of concurrent request workers",
+    )
+    max_retries: int = Field(
+        default=5,
+        description="Number of retries with exponential backoff on transient errors",
+    )
+    response_format: str = Field(
+        default="wav",
+        description="Audio format requested from the API",
+    )
+
+
 class WakeWordConfig(BaseModel):
     """Top-level config for a wake word model."""
 
@@ -126,6 +168,7 @@ class WakeWordConfig(BaseModel):
     tts_backend: TtsBackend = TtsBackend.piper_vits
     piper_tts: PiperTtsConfig = Field(default_factory=PiperTtsConfig)
     voxcpm_tts: VoxCpmTtsConfig = Field(default_factory=VoxCpmTtsConfig)
+    openai_tts: OpenAiTtsConfig = Field(default_factory=OpenAiTtsConfig)
     custom_negative_phrases: list[str] = Field(default_factory=list)
 
     # TTS parameters (Piper VITS + SLERP speaker blending)

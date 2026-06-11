@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Protocol, runtime_checkable
 
 from ...config import TtsBackend, WakeWordConfig
+from .openai_backend import OpenAiBackend
 from .piper_backend import PiperVitsBackend
 from .voxcpm_backend import VoxCpmBackend
 
@@ -42,4 +43,6 @@ def get_tts_backend(config: WakeWordConfig) -> SpeechSynthesizer:
         return PiperVitsBackend.from_config(config)
     if config.tts_backend is TtsBackend.voxcpm:
         return VoxCpmBackend.from_config(config)
+    if config.tts_backend is TtsBackend.openai:
+        return OpenAiBackend.from_config(config)
     raise ValueError(f"Unsupported tts_backend: {config.tts_backend!r}")

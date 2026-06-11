@@ -26,7 +26,7 @@ model_name: hey_livekit_openai
 # negatives. Include spelling variants users might say.
 
 target_phrases:
-  - "oké fri"
+  - "hey livekit"
 
 # =============================================================================
 # Data generation (top-level)
@@ -54,8 +54,21 @@ tts_batch_size: 50
 
 # custom_negative_phrases — Extra adversarial phrases (in addition to auto phoneme edits).
 custom_negative_phrases:
-  - "oké"
-  - "fri"
+  # Bare wake word without prefix — most common false trigger
+  - "livekit"
+  - "live kit"
+  # Phonetically similar prefixes
+  - "hey libby"
+  - "hey livid"
+  - "hey lidocaine"
+  - "hey liquid"
+  - "hey linux"
+  - "hey lyric"
+  # Partial/adjacent phrases
+  - "play live"
+  - "they live"
+  - "hey look at"
+  - "hey look it"
 
 # -----------------------------------------------------------------------------
 # openai_tts — OpenAI-style TTS settings (only used when tts_backend is openai)

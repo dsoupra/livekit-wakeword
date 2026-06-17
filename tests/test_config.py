@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 import yaml
 
 from livekit.wakeword.config import (
@@ -24,6 +25,16 @@ def test_default_config():
     assert config.steps == 50000
     assert config.model.model_type == ModelType.conv_attention
     assert config.model.model_size == ModelSize.small
+    assert config.augmentation.background_mix_level_percent == 15.0
+
+
+def test_background_mix_level_validation():
+    with pytest.raises(ValueError, match="background_mix_level_percent"):
+        WakeWordConfig(
+            model_name="test",
+            target_phrases=["hey test"],
+            augmentation={"background_mix_level_percent": 101.0},
+        )
 
 
 def test_model_size_presets():
@@ -112,9 +123,7 @@ def test_piper_checkpoint_path_custom_relpath(tmp_path: Path) -> None:
 def test_tts_backend_enum_in_yaml(tmp_path: Path) -> None:
     yaml_path = tmp_path / "cfg.yaml"
     yaml_path.write_text(
-        "model_name: t\n"
-        "target_phrases: [a]\n"
-        "tts_backend: piper_vits\n",
+        "model_name: t\ntarget_phrases: [a]\ntts_backend: piper_vits\n",
         encoding="utf-8",
     )
     cfg = load_config(yaml_path)
@@ -124,10 +133,7 @@ def test_tts_backend_enum_in_yaml(tmp_path: Path) -> None:
 def test_tts_backend_voxcpm_in_yaml(tmp_path: Path) -> None:
     yaml_path = tmp_path / "cfg.yaml"
     yaml_path.write_text(
-        "model_name: t\n"
-        "target_phrases: [a]\n"
-        "data_dir: ./d\n"
-        "tts_backend: voxcpm\n",
+        "model_name: t\ntarget_phrases: [a]\ndata_dir: ./d\ntts_backend: voxcpm\n",
         encoding="utf-8",
     )
     cfg = load_config(yaml_path)

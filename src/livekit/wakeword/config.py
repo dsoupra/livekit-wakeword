@@ -59,6 +59,7 @@ class AugmentationConfig(BaseModel):
     rounds: int = 1
     background_paths: list[str] = Field(default_factory=lambda: ["./data/backgrounds"])
     rir_paths: list[str] = Field(default_factory=lambda: ["./data/rirs"])
+    background_mix_level_percent: float = Field(default=15.0, ge=0.0, le=100.0)
 
 
 class ModelConfig(BaseModel):

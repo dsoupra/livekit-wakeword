@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import numpy as np
+import soundfile as sf
 
-from livekit.wakeword.data.augment import align_clip_to_end
+from livekit.wakeword.data.augment import AudioAugmentor, align_clip_to_end
 
 
 class TestAlignClipToEnd:
@@ -26,3 +27,21 @@ class TestAlignClipToEnd:
         audio = np.ones(48000, dtype=np.float32)  # 3s, longer than target
         result = align_clip_to_end(audio, 32000, jitter_samples=0)
         assert len(result) == 32000
+
+
+class TestBackgroundMixing:
+    def test_mix_level_percent_blends_original_and_background(self, tmp_path):
+        bg_dir = tmp_path / "backgrounds"
+        bg_dir.mkdir()
+        sf.write(bg_dir / "noise.wav", np.zeros(16000, dtype=np.float32), 16000)
+
+        augmentor = AudioAugmentor(
+            background_paths=[bg_dir],
+            rir_paths=[],
+            background_mix_level_percent=15.0,
+        )
+        audio = np.ones(16000, dtype=np.float32)
+
+        mixed = augmentor.mix_with_background(audio)
+
+        assert np.allclose(mixed, 0.85, atol=1e-4)

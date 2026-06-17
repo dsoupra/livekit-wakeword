@@ -121,6 +121,8 @@ output_dir: ./output
 # rounds           — Augmentation passes per sample.
 # background_paths — Dirs of raw noise (MUSAN subset from setup).
 # rir_paths        — Room impulse response dirs (from setup).
+# background_mix_level_percent — Linear blend amount for background noise.
+#   15.0 means 85% original audio + 15% background noise.
 
 augmentation:
   clip_duration: 2.0
@@ -128,6 +130,7 @@ augmentation:
   rounds: 3
   background_paths: [./data/backgrounds]
   rir_paths: [./data/rirs]
+  background_mix_level_percent: 15.0
 
 # =============================================================================
 # model (ModelConfig)

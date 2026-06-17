@@ -26,8 +26,10 @@ class AudioAugmentor:
         background_paths: list[Path],
         rir_paths: list[Path],
         sample_rate: int = 16000,
+        background_mix_level_percent: float = 15.0,
     ):
         self.sample_rate = sample_rate
+        self.background_mix_level_percent = background_mix_level_percent
         self.background_files = self._collect_wavs(background_paths)
         self.rir_files = self._collect_wavs(rir_paths)
         self._per_sample_aug = None
@@ -74,13 +76,10 @@ class AudioAugmentor:
         aug = self._get_per_sample_augmentations()
         return aug(samples=audio, sample_rate=self.sample_rate)
 
-    def mix_with_background(
-        self,
-        audio: np.ndarray,
-        snr_db_range: tuple[float, float] = (5.0, 15.0),
-    ) -> np.ndarray:
-        """Mix audio with random background noise at given SNR."""
-        if not self.background_files:
+    def mix_with_background(self, audio: np.ndarray) -> np.ndarray:
+        """Mix audio with random background noise using a fixed linear blend."""
+        mix_level = self.background_mix_level_percent / 100.0
+        if not self.background_files or mix_level <= 0.0:
             return audio
         import soundfile as sf
 
@@ -96,12 +95,7 @@ class AudioAugmentor:
         start = random.randint(0, max(0, len(bg) - len(audio)))
         bg = bg[start : start + len(audio)]
 
-        # Compute SNR mixing
-        snr_db = random.uniform(*snr_db_range)
-        audio_power = np.mean(audio**2) + 1e-8
-        bg_power = np.mean(bg**2) + 1e-8
-        scale = np.sqrt(audio_power / (bg_power * 10 ** (snr_db / 10)))
-        mixed = audio + scale * bg
+        mixed = (1.0 - mix_level) * audio + mix_level * bg
         return mixed.astype(np.float32)
 
 
@@ -157,6 +151,7 @@ def run_augment(config: WakeWordConfig) -> None:
     augmentor = AudioAugmentor(
         background_paths=[Path(p) for p in config.augmentation.background_paths],
         rir_paths=[Path(p) for p in config.augmentation.rir_paths],
+        background_mix_level_percent=config.augmentation.background_mix_level_percent,
     )
 
     for round_idx in range(config.augmentation.rounds):

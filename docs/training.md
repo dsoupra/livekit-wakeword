@@ -230,7 +230,7 @@ The ACAV100M dataset (if available) provides ~2000 hours of general audio embedd
 
 Background noise audio serves double duty in the pipeline:
 
-1. **Augmentation overlay** — mixed into all clips at random SNR during the augmentation step (see [Augmentation](augmentation.md))
+1. **Augmentation overlay** — mixed into all clips at the configured blend level during the augmentation step (see [Augmentation](augmentation.md))
 2. **Standalone negative class** — background clips are generated during the [data generation step](data-generation.md#background-noise-clip-generation), augmented alongside other splits, feature-extracted, and fed into training as their own negative class
 
 This teaches the model that pure ambient noise (silence, HVAC, music, etc.) is not a wake word, rather than only seeing noise blended with speech.

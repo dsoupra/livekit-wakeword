@@ -57,16 +57,25 @@ Applied via the `audiomentations` library to individual clips:
 
 ### Background Mixing
 
-`mix_with_background(audio, snr_db_range=(5.0, 15.0))` mixes audio with a random background noise clip at a randomly selected SNR within the given range.
+`mix_with_background(audio)` mixes audio with a random background noise clip using the configured linear blend level.
 
 The background clip is looped (tiled) if shorter than the audio and randomly cropped to a starting position. The mixing formula scales the background based on:
 
 ```
-scale = sqrt(audio_power / (background_power * 10^(snr_db / 10)))
-output = audio + scale * background
+noise = background_mix_level_percent / 100
+output = (1 - noise) * audio + noise * background
 ```
 
 > **Note:** Background noise files serve double duty — they are used here as augmentation overlays *and* also generated as standalone background clips during the [data generation step](data-generation.md#background-noise-clip-generation). Those background clips then pass through this same augmentation pipeline.
+
+Background overlays are controlled under `augmentation`:
+
+```yaml
+augmentation:
+  background_mix_level_percent: 15.0
+```
+
+For example, `15.0` means 85% original audio and 15% background noise.
 
 ## Clip Alignment
 

@@ -148,6 +148,7 @@ model:
 # label_smoothing       — BCE target smoothing.
 # max_negative_weight   — Upper cap for negative-class loss weight ramp.
 # target_fp_per_hour    — Validation FPPH target for adaptive weighting / thresholding.
+# eval_hit_count        — Number of hit thresholds to optimize during eval.
 # batch_n_per_class     — Samples per class per training step.
 
 steps: 100000
@@ -156,6 +157,7 @@ weight_decay: 0.01
 label_smoothing: 0.05
 max_negative_weight: 3000
 target_fp_per_hour: 0.1
+eval_hit_count: 1
 
 batch_n_per_class:
   positive: 50

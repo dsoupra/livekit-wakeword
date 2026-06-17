@@ -202,6 +202,7 @@ class WakeWordConfig(BaseModel):
     label_smoothing: float = 0.05
     max_negative_weight: float = 1500.0
     target_fp_per_hour: float = 0.2
+    eval_hit_count: int = Field(default=1, ge=1)
     batch_n_per_class: dict[str, int] = Field(
         default_factory=lambda: {
             "positive": 50,

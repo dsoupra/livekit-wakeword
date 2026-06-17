@@ -2,14 +2,12 @@
 
 from __future__ import annotations
 
-from pathlib import Path
-
 import numpy as np
-import pytest
 
 from livekit.wakeword.eval.evaluate import (
     _compute_aut,
     _compute_det_curve,
+    _find_hit_thresholds,
     _predict_onnx,
 )
 
@@ -99,3 +97,23 @@ class TestOnnxPredict:
         features = np.random.randn(50, 16, 96).astype(np.float32)
         scores = _predict_onnx(_MockSession(), features, batch_size=16)  # type: ignore[arg-type]
         assert scores.shape == (50,)
+
+
+class TestHitThresholds:
+    def test_single_hit_matches_expected_shape(self) -> None:
+        pos = np.array([0.9, 0.8, 0.7])
+        neg = np.array([0.1, 0.2, 0.3])
+        stages = _find_hit_thresholds(pos, neg, validation_hours=1.0, target_fpph=0.0, hit_count=1)
+
+        assert len(stages) == 1
+        assert stages[0]["hit"] == 1
+        assert 0.0 < stages[0]["threshold"] < 1.0
+
+    def test_two_hits_returns_two_thresholds(self) -> None:
+        pos = np.array([0.95, 0.9, 0.85, 0.2])
+        neg = np.array([0.8, 0.7, 0.1, 0.05])
+        stages = _find_hit_thresholds(pos, neg, validation_hours=1.0, target_fpph=0.0, hit_count=2)
+
+        assert len(stages) == 2
+        assert [stage["hit"] for stage in stages] == [1, 2]
+        assert all("threshold" in stage for stage in stages)

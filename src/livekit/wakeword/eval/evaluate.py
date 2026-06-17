@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import onnxruntime as ort
@@ -114,7 +115,7 @@ def _plot_det_curve(
     aut: float,
     model_name: str,
     output_path: Path,
-    metrics: dict[str, float],
+    metrics: dict[str, Any],
 ) -> None:
     """Render DET curve to PNG."""
     import matplotlib
@@ -151,12 +152,20 @@ def _plot_det_curve(
     ax.plot([0, 100], [100, 0], "--", color="gray", alpha=0.5, label="Random")
 
     # Annotation box with metrics
+    if "optimal_thresholds" in metrics:
+        threshold_lines = [
+            f"Hit {i}: {threshold:.2f}"
+            for i, threshold in enumerate(metrics["optimal_thresholds"], start=1)
+        ]
+    else:
+        threshold_lines = [f"Optimal Thresh: {metrics['optimal_threshold']:.2f}"]
+
     text_lines = [
         f"AUT: {aut:.4f}",
         f"FPPH: {metrics['fpph']:.2f}",
         f"Recall: {metrics['recall']:.1%}",
         f"Threshold: {metrics['threshold']:.2f}",
-        f"Optimal Thresh: {metrics['optimal_threshold']:.2f}",
+        *threshold_lines,
     ]
     ax.text(
         0.97,
@@ -179,16 +188,86 @@ def _plot_det_curve(
     logger.info(f"DET curve saved to {output_path}")
 
 
-def run_eval(config: WakeWordConfig, model_path: str | Path) -> dict[str, float]:
+def _find_hit_thresholds(
+    pos_scores: np.ndarray,
+    neg_scores: np.ndarray,
+    validation_hours: float,
+    target_fpph: float,
+    hit_count: int,
+) -> list[dict[str, Any]]:
+    """Greedily optimize one threshold for each required hit.
+
+    Each hit threshold is optimized on the examples that survived the previous
+    hit threshold. This models a multi-hit detector where later hits only see
+    candidates that crossed earlier hit gates.
+    """
+    from ..training.metrics import find_best_threshold
+
+    if hit_count < 1:
+        raise ValueError("hit_count must be >= 1")
+
+    stages: list[dict[str, Any]] = []
+    stage_pos = pos_scores
+    stage_neg = neg_scores
+    original_pos_count = len(pos_scores)
+    effective_threshold = 0.0
+
+    for hit_index in range(1, hit_count + 1):
+        optimal = find_best_threshold(
+            stage_pos,
+            stage_neg,
+            validation_hours=validation_hours,
+            target_fpph=target_fpph,
+        )
+        threshold = optimal["threshold"]
+        effective_threshold = max(effective_threshold, threshold)
+        cumulative_pos_mask = pos_scores >= effective_threshold
+        cumulative_neg_mask = neg_scores >= effective_threshold
+        cumulative_recall = float(np.mean(cumulative_pos_mask)) if original_pos_count > 0 else 0.0
+        cumulative_fpph = (
+            float(np.sum(cumulative_neg_mask) / validation_hours)
+            if validation_hours > 0
+            else float("inf")
+        )
+        stages.append(
+            {
+                "hit": hit_index,
+                "threshold": threshold,
+                "recall": optimal["recall"],
+                "fpph": optimal["fpph"],
+                "accuracy": optimal["accuracy"],
+                "cumulative_recall": cumulative_recall,
+                "cumulative_fpph": cumulative_fpph,
+                "n_positive": float(len(stage_pos)),
+                "n_negative": float(len(stage_neg)),
+            }
+        )
+        stage_pos = stage_pos[stage_pos >= threshold]
+        stage_neg = stage_neg[stage_neg >= threshold]
+
+    return stages
+
+
+def run_eval(
+    config: WakeWordConfig,
+    model_path: str | Path,
+    hit_count: int | None = None,
+) -> dict[str, Any]:
     """Run full evaluation: compute scores, DET curve, AUT, and save plot + metrics JSON.
 
     Args:
         config: Wake word configuration (used to locate validation data).
         model_path: Path to the ONNX classifier model to evaluate.
+        hit_count: Number of detection hits to optimize thresholds for. Defaults
+            to config.eval_hit_count.
 
     Returns:
         Dict with keys: aut, fpph, recall, accuracy, threshold
     """
+    resolved_hit_count = config.eval_hit_count if hit_count is None else hit_count
+    if resolved_hit_count < 1:
+        raise ValueError("hit_count must be >= 1")
+
     # Load ONNX model
     model_path = Path(model_path)
     if not model_path.exists():
@@ -215,7 +294,7 @@ def run_eval(config: WakeWordConfig, model_path: str | Path) -> dict[str, float]
     clip_duration = config.augmentation.clip_duration
     validation_hours = neg_features.shape[0] * clip_duration / 3600.0
 
-    from ..training.metrics import evaluate_model, find_best_threshold
+    from ..training.metrics import evaluate_model
 
     fixed = evaluate_model(
         pos_scores,
@@ -224,15 +303,18 @@ def run_eval(config: WakeWordConfig, model_path: str | Path) -> dict[str, float]
         validation_hours=validation_hours,
     )
 
-    optimal = find_best_threshold(
-        pos_scores,
-        neg_scores,
+    hit_thresholds = _find_hit_thresholds(
+        pos_scores=pos_scores,
+        neg_scores=neg_scores,
         validation_hours=validation_hours,
         target_fpph=config.target_fp_per_hour,
+        hit_count=resolved_hit_count,
     )
+    optimal = hit_thresholds[-1]
+    optimal_thresholds = [stage["threshold"] for stage in hit_thresholds]
 
     # Build results
-    results = {
+    results: dict[str, Any] = {
         "aut": aut,
         "fpph": fixed["fpph"],
         "recall": fixed["recall"],
@@ -241,6 +323,9 @@ def run_eval(config: WakeWordConfig, model_path: str | Path) -> dict[str, float]
         "optimal_threshold": optimal["threshold"],
         "optimal_recall": optimal["recall"],
         "optimal_fpph": optimal["fpph"],
+        "hit_count": resolved_hit_count,
+        "optimal_thresholds": optimal_thresholds,
+        "hit_thresholds": hit_thresholds,
         "n_positive": int(pos_features.shape[0]),
         "n_negative": int(neg_features.shape[0]),
         "validation_hours": round(validation_hours, 2),
@@ -249,7 +334,11 @@ def run_eval(config: WakeWordConfig, model_path: str | Path) -> dict[str, float]
     # Save plot
     output_dir = config.model_output_dir
     plot_path = output_dir / f"{config.model_name}_det.png"
-    plot_metrics = {**fixed, "optimal_threshold": optimal["threshold"]}
+    plot_metrics = {
+        **fixed,
+        "optimal_threshold": optimal["threshold"],
+        "optimal_thresholds": optimal_thresholds,
+    }
     _plot_det_curve(fpr, fnr, aut, config.model_name, plot_path, plot_metrics)
 
     # Save metrics JSON

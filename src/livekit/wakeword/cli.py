@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 from pathlib import Path
+from typing import cast
 
 import typer
 from rich.logging import RichHandler
@@ -339,6 +340,12 @@ def eval(
     model_path: str = typer.Option(
         None, "--model", "-m", help="Path to ONNX model (default: <output_dir>/<model_name>.onnx)"
     ),
+    hit_count: int | None = typer.Option(
+        None,
+        "--hit-count",
+        help="Number of detection hits to optimize thresholds for (default: config.eval_hit_count)",
+        min=1,
+    ),
 ) -> None:
     """Evaluate model on validation set: DET curve, AUT, FPPH, recall."""
     from pathlib import Path
@@ -354,11 +361,14 @@ def eval(
 
     from .eval.evaluate import run_eval
 
-    results = run_eval(config, resolved_model)
+    results = run_eval(config, resolved_model, hit_count=hit_count)
+    optimal_threshold_values = cast(list[float], results["optimal_thresholds"])
+    optimal_thresholds = ", ".join(f"{threshold:.2f}" for threshold in optimal_threshold_values)
 
     logger.info(
         f"AUT={results['aut']:.4f}  FPPH={results['fpph']:.2f}  "
-        f"Recall={results['recall']:.1%}  Threshold={results['threshold']:.2f}"
+        f"Recall={results['recall']:.1%}  Threshold={results['threshold']:.2f}  "
+        f"Optimal hit thresholds=[{optimal_thresholds}]"
     )
     logger.info(f"DET curve: {config.model_output_dir / f'{config.model_name}_det.png'}")
 
@@ -408,9 +418,11 @@ def run(
 
     logger.info("Step 6/6: Evaluate model")
     results = run_eval(config, onnx_path)
+    optimal_threshold_values = cast(list[float], results["optimal_thresholds"])
+    optimal_thresholds = ", ".join(f"{threshold:.2f}" for threshold in optimal_threshold_values)
     logger.info(
         f"Eval: AUT={results['aut']:.4f}  FPPH={results['fpph']:.2f}  "
-        f"Recall={results['recall']:.1%}"
+        f"Recall={results['recall']:.1%}  Optimal hit thresholds=[{optimal_thresholds}]"
     )
 
     logger.info("Full pipeline complete!")
